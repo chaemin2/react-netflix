@@ -1,0 +1,10 @@
+{
+  "files": {
+    "main.js": "/react-netflix/static/js/main.ccf82692.js",
+    "index.html": "/react-netflix/index.html",
+    "main.ccf82692.js.map": "/react-netflix/static/js/main.ccf82692.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.ccf82692.js"
+  ]
+}
