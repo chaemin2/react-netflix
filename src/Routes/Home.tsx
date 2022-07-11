@@ -1,6 +1,6 @@
 import { useQuery } from 'react-query';
 import styled from 'styled-components';
-import { getMovies, getPopularMovie, IGetMoviesResult } from '../api';
+import { getMovies, getPopularMovie, IGetMoviesPopularResult, IGetMoviesResult } from '../api';
 import { makeImagePath } from '../utils';
 import { AnimatePresence, motion, useViewportScroll } from 'framer-motion';
 import { useState } from 'react';
@@ -167,7 +167,7 @@ const boxVariants = {
 		scale: 1.3,
 		y: -80,
 		transition: {
-			delay: 0.5,
+			delay: 0.3,
 			duaration: 0.1,
 			type: 'tween'
 		}
@@ -178,7 +178,7 @@ const infoVariants = {
 	hover: {
 		opacity: 1,
 		transition: {
-			delay: 0.5,
+			delay: 0.3,
 			duaration: 0.1,
 			type: 'tween'
 		}
@@ -190,11 +190,10 @@ const offset = 6;
 function Home() {
 	const history = useHistory(); // url 변경을 위한 변수
 	const bigMovieMatch = useRouteMatch<{ movieId: string }>('/movies/:movieId');
-	const popularMatch = useRouteMatch<{ movieId: string }>('/movies/popular/:movieId');
-	console.log(bigMovieMatch, popularMatch);
+	const popularMatch = useRouteMatch<{ movieId: string }>('/popularMovies/:movieId');
 	const { data: nowData, isLoading: nowLoading } = useQuery<IGetMoviesResult>(['movies', 'nowPlaying'], getMovies);
-	const { data: popularData, isLoading: popularLoading } = useQuery<IGetMoviesResult>(
-		['movies', 'popular'],
+	const { data: popularData, isLoading: popularLoading } = useQuery<IGetMoviesPopularResult>(
+		['movies', 'popularMovie'],
 		getPopularMovie
 	);
 
@@ -209,7 +208,7 @@ function Home() {
 		if (type === 'now' && nowData) {
 			if (leaving) return;
 			toggleLeaving('now');
-			const totalMovies = nowData?.results.length - 1;
+			const totalMovies = nowData.results.length;
 			const maxIndex = Math.floor(totalMovies / offset) - 1;
 			setIndex(prev => (prev === maxIndex ? 0 : prev + 1));
 		}
@@ -217,7 +216,7 @@ function Home() {
 		if (type === 'popular' && popularData) {
 			if (popularleaving) return;
 			toggleLeaving('popular');
-			const totalMovies = popularData?.results.length - 1;
+			const totalMovies = popularData.results.length;
 			const maxIndex = Math.floor(totalMovies / offset) - 1;
 			setPopularIndex(prev => (prev === maxIndex ? 0 : prev + 1));
 		}
@@ -234,7 +233,7 @@ function Home() {
 
 	const onBoxClicked = (movieId: number, type: string) => {
 		if (type === 'now') history.push(`/movies/${movieId}`);
-		if (type === 'popular') history.push(`/movies/popular/${movieId}`);
+		if (type === 'popular') history.push(`/popularMovies/${movieId}`);
 	};
 
 	const clickedMovie =
@@ -246,7 +245,7 @@ function Home() {
 	const onOverlayClick = () => history.push('/');
 	return (
 		<Wrapper>
-			{nowLoading ? (
+			{nowLoading && popularLoading ? (
 				<Loader>Loading</Loader>
 			) : (
 				<>
@@ -257,7 +256,7 @@ function Home() {
 					<Slider>
 						{/* 현재 상영작 */}
 						<SubTitle>Now Playing!</SubTitle>
-						<AnimatePresence initial={false} onExitComplete={() => toggleLeaving}>
+						<AnimatePresence initial={false} onExitComplete={() => toggleLeaving('now')}>
 							<Row
 								variants={rowVariants}
 								initial="hidden"
@@ -271,14 +270,14 @@ function Home() {
 									.slice(offset * index, offset * index + offset)
 									.map(movie => (
 										<Box
-											key={movie.id}
+											key={`now_${movie.id}`}
 											bgphoto={makeImagePath(movie.poster_path || '', 'w500')}
 											variants={boxVariants}
 											transition={{ type: 'tween' }}
 											initial="normal"
 											whileHover="hover"
 											onClick={() => onBoxClicked(movie.id, 'now')}
-											layoutId={movie.id + ''}
+											layoutId={`now_${movie.id}`}
 										>
 											<Info variants={infoVariants}>
 												<h4>{movie.title}</h4>
@@ -293,7 +292,7 @@ function Home() {
 
 						{/* 인기영화 */}
 						<SubTitle style={{ marginTop: '450px' }}>Popular</SubTitle>
-						<AnimatePresence initial={false} onExitComplete={() => toggleLeaving}>
+						<AnimatePresence initial={false} onExitComplete={() => toggleLeaving('popular')}>
 							<Row
 								variants={rowVariants}
 								initial="hidden"
@@ -307,14 +306,14 @@ function Home() {
 									.slice(offset * popularIndex, offset * popularIndex + offset)
 									.map(movie => (
 										<Box
-											key={movie.id}
+											key={`popular_${movie.id}`}
 											bgphoto={makeImagePath(movie.poster_path || '', 'w500')}
 											variants={boxVariants}
 											transition={{ type: 'tween' }}
 											initial="normal"
 											whileHover="hover"
 											onClick={() => onBoxClicked(movie.id, 'popular')}
-											layoutId={movie.id + ''}
+											layoutId={`popular_${movie.id}`}
 										>
 											<Info variants={infoVariants}>
 												<h4>{movie.title}</h4>
@@ -333,7 +332,10 @@ function Home() {
 						{bigMovieMatch ? (
 							<>
 								<Overlay onClick={onOverlayClick} exit={{ opacity: 0 }} animate={{ opacity: 1 }} />
-								<BigMovie style={{ top: scrollY.get() + 100 }}>
+								<BigMovie
+									style={{ top: scrollY.get() + 100 }}
+									layoutId={`now_${bigMovieMatch.params.movieId}`}
+								>
 									{clickedMovie && (
 										<>
 											<BigCover
@@ -351,14 +353,14 @@ function Home() {
 								</BigMovie>
 							</>
 						) : null}
-					</AnimatePresence>
 
-					{/* 인기 영화 */}
-					<AnimatePresence>
 						{popularMatch ? (
 							<>
 								<Overlay onClick={onOverlayClick} exit={{ opacity: 0 }} animate={{ opacity: 1 }} />
-								<BigMovie style={{ top: scrollY.get() + 100 }}>
+								<BigMovie
+									style={{ top: scrollY.get() + 100 }}
+									layoutId={`popular_${popularMatch.params.movieId}`}
+								>
 									{clickedPopularMovie && (
 										<>
 											<BigCover

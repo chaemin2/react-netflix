@@ -20,6 +20,13 @@ export interface IGetMoviesResult {
 	total_results: number;
 }
 
+export interface IGetMoviesPopularResult {
+	page: number;
+	results: IMovie[];
+	total_pages: number;
+	total_results: number;
+}
+
 export function getMovies() {
 	// 영어: en-US, 한글: ko-KR
 	return fetch(`${BASE_PATH}/movie/now_playing?api_key=${API_KEY}&language=ko-KR&page=1&region=kr`).then(response =>
